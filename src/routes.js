@@ -8,6 +8,9 @@ const { getItemsInFolder, searchRecursive, getThumbPath, formatBytes } = require
 const { renderHTML } = require("./templates/html");
 const metadata = require("./metadata");
 
+// Video extensions
+const VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v', '.wmv', '.flv'];
+
 // Pagination config
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -282,6 +285,45 @@ function setupRoutes(app, baseDir) {
             res.json({ video: videos[randomIndex].path });
         } catch (e) {
             res.json({ video: null });
+        }
+    });
+
+    // Global random video API (all folders)
+    app.get("/api/random-global", async (req, res) => {
+        try {
+            // Recursively get all videos from all folders
+            async function getAllVideos(dir, basePath = "") {
+                const allVideos = [];
+                const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+
+                    if (entry.isDirectory()) {
+                        const subVideos = await getAllVideos(fullPath, relativePath);
+                        allVideos.push(...subVideos);
+                    } else if (VIDEO_EXTENSIONS.some(ext => entry.name.toLowerCase().endsWith(ext))) {
+                        allVideos.push(relativePath);
+                    }
+                }
+                return allVideos;
+            }
+
+            const allVideos = await getAllVideos(baseDir);
+
+            if (allVideos.length === 0) {
+                return res.json({ video: null, folder: null });
+            }
+
+            const randomIndex = Math.floor(Math.random() * allVideos.length);
+            const videoPath = allVideos[randomIndex];
+            const folderPath = videoPath.split('/').slice(0, -1).join('/');
+
+            res.json({ video: videoPath, folder: folderPath });
+        } catch (e) {
+            console.error('Global random error:', e);
+            res.json({ video: null, folder: null });
         }
     });
 }

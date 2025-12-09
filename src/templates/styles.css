@@ -225,6 +225,332 @@ svg {
   height: 20px;
 }
 
+/* Queue Drawer */
+.queue-drawer {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 380px;
+  max-width: 90vw;
+  height: 100vh;
+  background: rgba(20, 20, 30, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s ease;
+  box-shadow: -5px 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.queue-drawer.open {
+  right: 0;
+}
+
+.queue-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.queue-drawer-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.queue-drawer-header h3 svg {
+  color: var(--primary);
+}
+
+.queue-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.queue-header-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.queue-header-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+}
+
+.queue-header-btn.clear-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.queue-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.queue-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.queue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+}
+
+.queue-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 15px;
+}
+
+.queue-empty svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.5;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.queue-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.queue-item.playing {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.queue-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+.queue-item-drag {
+  color: var(--text-muted);
+  cursor: grab;
+  padding: 4px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.queue-item:hover .queue-item-drag {
+  opacity: 1;
+}
+
+.queue-item-thumb {
+  width: 80px;
+  height: 50px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.queue-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.queue-item-title {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.queue-item-folder {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.queue-item:hover .queue-item-actions {
+  opacity: 1;
+}
+
+.queue-item-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.queue-item-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.queue-item-btn.remove-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.queue-item-number {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-width: 20px;
+  text-align: center;
+}
+
+.queue-item.playing .queue-item-number {
+  color: var(--primary);
+}
+
+/* Queue button badge */
+.queue-btn {
+  position: relative;
+}
+
+.queue-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.queue-badge:empty,
+.queue-badge[data-count="0"] {
+  display: none;
+}
+
+/* Add to queue button on video cards */
+.add-queue-btn-card {
+  position: absolute;
+  top: 8px;
+  left: 45px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+  z-index: 15;
+}
+
+.card:hover .add-queue-btn-card,
+.video-card:hover .add-queue-btn-card,
+.section-card:hover .add-queue-btn-card {
+  opacity: 1;
+}
+
+.add-queue-btn-card:hover {
+  background: var(--primary);
+  transform: scale(1.1);
+}
+
+.add-queue-btn-card svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Queue drawer overlay */
+.queue-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+}
+
+.queue-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 768px) {
+  .queue-drawer {
+    width: 100%;
+    max-width: 100%;
+    right: -100%;
+  }
+
+  .queue-item-thumb {
+    width: 60px;
+    height: 38px;
+  }
+
+  .queue-item-actions {
+    opacity: 1;
+  }
+}
+
 .search-wrapper {
   position: relative;
   margin-right: 10px;
@@ -1484,6 +1810,40 @@ video {
 .card:hover .fav-btn-card,
 .fav-btn-card.active {
   opacity: 1;
+}
+
+/* Info Button on Cards */
+.info-btn-card {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  padding: 6px;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.2s;
+  cursor: pointer;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-btn-card svg {
+  width: 16px;
+  height: 16px;
+}
+
+.card:hover .info-btn-card,
+.section-card:hover .info-btn-card {
+  opacity: 1;
+}
+
+.info-btn-card:hover {
+  background: rgba(56, 189, 248, 0.7);
+  transform: scale(1.1);
 }
 
 /* Section Styles (Continue Watching & Favorites) */

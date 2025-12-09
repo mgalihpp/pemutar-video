@@ -466,17 +466,16 @@ const sortBtn = document.getElementById('sortBtn');
 sortBtn.addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('sortMenu').classList.toggle('show'); });
 document.addEventListener('click', () => document.getElementById('sortMenu').classList.remove('show'));
 
-// Random Video Button
+// Random Video Button - Global (all folders)
 const randomBtn = document.getElementById('randomBtn');
 randomBtn?.addEventListener('click', async () => {
     try {
-        const currentPath = decodeURIComponent(window.CURRENT_PATH || '');
-        const res = await fetch(`/api/random?path=${encodeURIComponent(currentPath)}`);
+        const res = await fetch('/api/random-global');
         const data = await res.json();
         if (data.video) {
-            window.location.href = `?path=${encodeURIComponent(currentPath)}&v=${encodeURIComponent(data.video)}`;
+            window.location.href = `?path=${encodeURIComponent(data.folder)}&v=${encodeURIComponent(data.video)}`;
         } else {
-            alert('Tidak ada video di folder ini');
+            alert('Tidak ada video');
         }
     } catch (e) {
         console.error('Error getting random video:', e);
@@ -493,16 +492,15 @@ document.getElementById('mobileSearchBtn')?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-// Mobile Random Button - Same as desktop
+// Mobile Random Button - Global random
 document.getElementById('mobileRandomBtn')?.addEventListener('click', async () => {
     try {
-        const currentPath = decodeURIComponent(window.CURRENT_PATH || '');
-        const res = await fetch(`/api/random?path=${encodeURIComponent(currentPath)}`);
+        const res = await fetch('/api/random-global');
         const data = await res.json();
         if (data.video) {
-            window.location.href = `?path=${encodeURIComponent(currentPath)}&v=${encodeURIComponent(data.video)}`;
+            window.location.href = `?path=${encodeURIComponent(data.folder)}&v=${encodeURIComponent(data.video)}`;
         } else {
-            alert('Tidak ada video di folder ini');
+            alert('Tidak ada video');
         }
     } catch (e) {
         console.error('Error getting random video:', e);
@@ -640,6 +638,26 @@ if (video) {
                 container.classList.add('idle');
             }, 3000);
         }
+    }
+
+    // Add to Queue (Theater)
+    const addToQueueBtnTheater = document.getElementById('addToQueueBtnTheater');
+    if (addToQueueBtnTheater) {
+        addToQueueBtnTheater.addEventListener('click', () => {
+            // Get current video info from dataset or URL
+            const videoPath = video.dataset.path || new URL(window.location).searchParams.get('v');
+            const folderPath = new URL(window.location).searchParams.get('path');
+            const title = document.title.replace(' - Ox Video', ''); // Simple fallback
+
+            if (videoPath) {
+                addToVideoQueue(
+                    decodeURIComponent(videoPath),
+                    decodeURIComponent(folderPath),
+                    title,
+                    '' // No thumb in theater mode easily available/needed
+                );
+            }
+        });
     }
 
     // Play/Pause
@@ -1174,3 +1192,348 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('scroll', () => {
     document.getElementById('scrollTopBtn').classList.toggle('visible', window.scrollY > 300);
 });
+
+// ===============================================
+// PLAYLIST/QUEUE SYSTEM
+// ===============================================
+
+// Queue state
+let videoQueue = [];
+let currentQueueIndex = -1;
+
+// Load queue from localStorage
+function loadQueue() {
+    try {
+        const saved = localStorage.getItem('videoQueue');
+        if (saved) {
+            videoQueue = JSON.parse(saved);
+            updateQueueBadge();
+            renderQueueList();
+        }
+    } catch (e) {
+        console.error('Failed to load queue:', e);
+        videoQueue = [];
+    }
+}
+
+// Save queue to localStorage
+function saveQueue() {
+    try {
+        localStorage.setItem('videoQueue', JSON.stringify(videoQueue));
+        updateQueueBadge();
+    } catch (e) {
+        console.error('Failed to save queue:', e);
+    }
+}
+
+// Update queue badge count
+function updateQueueBadge() {
+    const badges = document.querySelectorAll('.queue-badge');
+    badges.forEach(badge => {
+        badge.textContent = videoQueue.length || '';
+        badge.dataset.count = videoQueue.length;
+    });
+}
+
+// Add video to queue
+function addToVideoQueue(videoPath, folderPath, title, thumbnail) {
+    // Decode paths to ensure we store raw strings (prevent double encoding)
+    videoPath = decodeURIComponent(videoPath);
+    folderPath = decodeURIComponent(folderPath);
+
+    // Check if already in queue
+    const exists = videoQueue.some(item => item.videoPath === videoPath);
+    if (exists) {
+        showToast('Video sudah ada di antrian');
+        return false;
+    }
+
+    videoQueue.push({
+        videoPath,
+        folderPath,
+        title,
+        thumbnail,
+        addedAt: Date.now()
+    });
+
+    saveQueue();
+    renderQueueList();
+    showToast('Ditambahkan ke antrian');
+    return true;
+}
+
+// Remove video from queue
+function removeFromQueue(index) {
+    if (index >= 0 && index < videoQueue.length) {
+        videoQueue.splice(index, 1);
+        if (currentQueueIndex >= index && currentQueueIndex > 0) {
+            currentQueueIndex--;
+        }
+        saveQueue();
+        renderQueueList();
+    }
+}
+
+// Clear entire queue
+function clearQueue() {
+    videoQueue = [];
+    currentQueueIndex = -1;
+    saveQueue();
+    renderQueueList();
+    showToast('Antrian dikosongkan');
+}
+
+// Play video from queue
+function playFromQueue(index) {
+    if (index >= 0 && index < videoQueue.length) {
+        currentQueueIndex = index;
+        const item = videoQueue[index];
+        const url = new URL(window.location.origin);
+        // Ensure we decode before setting to params (which will re-encode)
+        // This handles cases where queue items might be stored as encoded strings
+        url.searchParams.set('path', decodeURIComponent(item.folderPath));
+        url.searchParams.set('v', decodeURIComponent(item.videoPath));
+        url.searchParams.set('queue', 'true');
+        window.location = url;
+    }
+}
+
+// Play next in queue
+function playNextInQueue() {
+    if (videoQueue.length === 0) return false;
+
+    const nextIndex = currentQueueIndex + 1;
+    if (nextIndex < videoQueue.length) {
+        playFromQueue(nextIndex);
+        return true;
+    }
+    return false;
+}
+
+// Move item in queue (for drag-drop reorder)
+function moveQueueItem(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const item = videoQueue.splice(fromIndex, 1)[0];
+    videoQueue.splice(toIndex, 0, item);
+    saveQueue();
+    renderQueueList();
+}
+
+// Render queue list in drawer
+function renderQueueList() {
+    const queueList = document.getElementById('queueList');
+    if (!queueList) return;
+
+    if (videoQueue.length === 0) {
+        queueList.innerHTML = `
+            <div class="queue-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18V5l12-2v13"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <circle cx="18" cy="16" r="3"/>
+                </svg>
+                <p>Antrian kosong</p>
+                <small>Tambahkan video dari galeri</small>
+            </div>
+        `;
+        return;
+    }
+
+    // Find current playing video
+    const currentUrl = new URL(window.location);
+    const currentVideo = currentUrl.searchParams.get('v');
+
+    queueList.innerHTML = videoQueue.map((item, index) => {
+        const isPlaying = item.videoPath === currentVideo;
+        if (isPlaying) currentQueueIndex = index;
+
+        return `
+            <div class="queue-item ${isPlaying ? 'playing' : ''}" 
+                 data-index="${index}" 
+                 draggable="true">
+                <span class="queue-item-number">${isPlaying ? '▶' : index + 1}</span>
+                <span class="queue-item-drag">⋮⋮</span>
+                <img class="queue-item-thumb" 
+                     src="${item.thumbnail || '/thumb-placeholder.svg'}" 
+                     alt=""
+                     onerror="this.src='/thumb-placeholder.svg'">
+                <div class="queue-item-info">
+                    <div class="queue-item-title">${item.title}</div>
+                    <div class="queue-item-folder">${item.folderPath}</div>
+                </div>
+                <div class="queue-item-actions">
+                    <button class="queue-item-btn" onclick="event.stopPropagation(); playFromQueue(${index})" title="Putar">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </button>
+                    <button class="queue-item-btn remove-btn" onclick="event.stopPropagation(); removeFromQueue(${index})" title="Hapus">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Add drag-drop event listeners
+    setupQueueDragDrop();
+}
+
+// Setup drag and drop for queue reordering
+function setupQueueDragDrop() {
+    const queueItems = document.querySelectorAll('.queue-item');
+    let draggedItem = null;
+
+    queueItems.forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            draggedItem = null;
+        });
+
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (draggedItem && draggedItem !== item) {
+                const fromIndex = parseInt(draggedItem.dataset.index);
+                const toIndex = parseInt(item.dataset.index);
+                moveQueueItem(fromIndex, toIndex);
+            }
+        });
+
+        // Click to play
+        item.addEventListener('click', () => {
+            const index = parseInt(item.dataset.index);
+            playFromQueue(index);
+        });
+    });
+}
+
+// Toggle queue drawer
+function toggleQueueDrawer(open) {
+    const drawer = document.getElementById('queueDrawer');
+    const overlay = document.getElementById('queueOverlay');
+    if (!drawer) return;
+
+    if (open === undefined) {
+        open = !drawer.classList.contains('open');
+    }
+
+    drawer.classList.toggle('open', open);
+    overlay?.classList.toggle('open', open);
+    document.body.style.overflow = open ? 'hidden' : '';
+}
+
+// Show toast notification
+function showToast(message, duration = 2000) {
+    // Remove existing toast
+    const existing = document.querySelector('.toast-notification');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        z-index: 9999;
+        animation: fadeInUp 0.3s ease;
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
+// Initialize queue system
+function initQueueSystem() {
+    loadQueue();
+
+    // Queue drawer buttons
+    const queueBtn = document.getElementById('queueBtn');
+    const queueCloseBtn = document.getElementById('queueCloseBtn');
+    const queueOverlay = document.getElementById('queueOverlay');
+    const clearQueueBtn = document.getElementById('clearQueueBtn');
+
+    queueBtn?.addEventListener('click', () => toggleQueueDrawer(true));
+    queueCloseBtn?.addEventListener('click', () => toggleQueueDrawer(false));
+    queueOverlay?.addEventListener('click', () => toggleQueueDrawer(false));
+    clearQueueBtn?.addEventListener('click', () => {
+        if (confirm('Kosongkan semua antrian?')) {
+            clearQueue();
+        }
+    });
+
+    // Mobile Queue Button
+    document.getElementById('mobileQueueBtn')?.addEventListener('click', () => toggleQueueDrawer(true));
+
+    // Add to queue buttons on video cards
+    document.querySelectorAll('.add-queue-btn-card').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const card = btn.closest('.video-card, .section-card');
+            if (!card) return;
+
+            const videoPath = card.dataset.video || card.querySelector('a')?.href?.split('v=')[1]?.split('&')[0];
+            const folderPath = new URL(window.location).searchParams.get('path') || '';
+            const title = card.querySelector('.video-title, .section-card-title')?.textContent || 'Unknown';
+            const thumbnail = card.querySelector('img')?.src || '';
+
+            if (videoPath) {
+                addToVideoQueue(decodeURIComponent(videoPath), folderPath, title, thumbnail);
+            }
+        });
+    });
+
+    // Check if playing from queue and setup auto-next
+    const currentUrl = new URL(window.location);
+    if (currentUrl.searchParams.get('queue') === 'true' && video) {
+        video.addEventListener('ended', () => {
+            // If playing from queue, try to play next
+            if (!playNextInQueue()) {
+                // No more in queue, show up-next overlay if available
+                console.log('Queue finished');
+            }
+        });
+    }
+
+    // Keyboard shortcut: Q to toggle queue
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'q' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            const activeEl = document.activeElement;
+            if (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA') {
+                toggleQueueDrawer();
+            }
+        }
+    });
+}
+
+// Initialize on DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initQueueSystem);
+} else {
+    initQueueSystem();
+}

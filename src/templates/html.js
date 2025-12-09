@@ -37,6 +37,12 @@ function renderContinueWatching(items, currentPath) {
                   <div class="progress-fill" style="width: ${item.percent}%"></div>
                 </div>
               </div>
+              <button class="add-queue-btn-card" onclick="event.stopPropagation(); addToVideoQueue('${encodeURIComponent(item.path)}', '${encodeURIComponent(folderPath)}', '${item.name.replace(/'/g, "\\'")}', '${item.thumbUrl || ''}')" title="Tambah ke Antrian">
+                ${ICONS.plus}
+              </button>
+              <button class="info-btn-card" onclick="event.stopPropagation(); showVideoInfo('${item.name.replace(/'/g, "\\'")}', '${item.path.replace(/'/g, "\\'")}', '-', '${formatTime(item.duration)}')" title="Info">
+                ${ICONS.info}
+              </button>
               <div class="overlay-play"><div class="play-circle">${ICONS.play}</div></div>
             </div>
             <div class="meta">
@@ -97,6 +103,12 @@ function renderFavorites(items) {
               <img src="${item.thumbUrl || ''}" loading="lazy">
               <div class="duration-badge">${item.duration ? formatTime(item.duration) : '--:--'}</div>
               <div class="favorite-badge">${ICONS.heartFilled}</div>
+              <button class="add-queue-btn-card" onclick="event.stopPropagation(); addToVideoQueue('${encodeURIComponent(item.path)}', '${encodeURIComponent(folderPath)}', '${item.name.replace(/'/g, "\\'")}', '${item.thumbUrl || ''}')" title="Tambah ke Antrian">
+                ${ICONS.plus}
+              </button>
+              <button class="info-btn-card" onclick="event.stopPropagation(); showVideoInfo('${item.name.replace(/'/g, "\\'")}', '${item.path.replace(/'/g, "\\'")}', '-', '${item.duration ? formatTime(item.duration) : '--:--'}')" title="Info">
+                ${ICONS.info}
+              </button>
               <div class="overlay-play"><div class="play-circle">${ICONS.play}</div></div>
             </div>
             <div class="meta">
@@ -145,6 +157,7 @@ ${CSS_CONTENT}
     </div>
 
     <div class="nav-right">
+      <button class="icon-btn desktop-only" id="queueBtn" title="Queue"><span class="queue-badge hidden" id="queueBadge">0</span>${ICONS.queue}</button>
       <button class="icon-btn desktop-only" id="randomBtn" title="Random Video">${ICONS.shuffle}</button>
       <button class="icon-btn desktop-only" id="viewBtn" title="Grid/List"><span class="icon-grid">${ICONS.grid}</span><span class="icon-list hidden">${ICONS.list}</span></button>
       
@@ -176,6 +189,11 @@ ${CSS_CONTENT}
     <button class="bottom-nav-item" id="mobileRandomBtn" title="Random">
       ${ICONS.shuffle}
       <span>Random</span>
+    </button>
+    <button class="bottom-nav-item queue-btn" id="mobileQueueBtn" title="Queue">
+      <span class="queue-badge hidden" id="mobileQueueBadge">0</span>
+      ${ICONS.queue}
+      <span>Antrian</span>
     </button>
     <button class="bottom-nav-item" id="mobileViewBtn" title="Tampilan">
       <span class="icon-grid">${ICONS.grid}</span>
@@ -211,6 +229,33 @@ ${CSS_CONTENT}
         ${ICONS.keyboard}
         <span>Keyboard Shortcuts</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Queue Overlay -->
+  <div class="queue-overlay" id="queueOverlay"></div>
+  
+  <!-- Queue Drawer -->
+  <div class="queue-drawer" id="queueDrawer">
+    <div class="queue-drawer-header">
+      <h3>${ICONS.queue} Antrian</h3>
+      <div class="queue-header-actions">
+        <button class="queue-header-btn clear-btn" id="clearQueueBtn" title="Hapus Semua">
+          ${ICONS.trash}
+        </button>
+        <button class="queue-close-btn" id="queueCloseBtn">${ICONS.close}</button>
+      </div>
+    </div>
+    <div class="queue-list" id="queueList">
+      <div class="queue-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18V5l12-2v13"/>
+          <circle cx="6" cy="18" r="3"/>
+          <circle cx="18" cy="16" r="3"/>
+        </svg>
+        <p>Antrian kosong</p>
+        <small>Tambahkan video dari galeri</small>
+      </div>
     </div>
   </div>
 
@@ -294,6 +339,9 @@ ${CSS_CONTENT}
                 </div>
               </div>
               <div class="controls-right">
+                <button class="control-btn" id="addToQueueBtnTheater" title="Tambah ke Antrian">
+                  ${ICONS.plus}
+                </button>
                 <button class="control-btn" id="speedBtn" title="Playback Speed">1x</button>
                 <button class="control-btn" id="pipBtn" title="Picture in Picture">${ICONS.pip}</button>
                 <button class="control-btn" id="fullscreenBtn" title="Fullscreen (F)">
@@ -402,6 +450,14 @@ ${CSS_CONTENT}
              <button class="fav-btn-card ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); toggleFavoriteCard(this, '${encodeURIComponent(v.path)}')" title="Favorite">
                <span class="heart-empty">${ICONS.heart}</span>
                <span class="heart-filled">${ICONS.heartFilled}</span>
+             </button>
+
+             <button class="add-queue-btn-card" onclick="event.stopPropagation(); addToVideoQueue('${encodeURIComponent(v.path)}', '${encodeURIComponent(currentPath)}', '${v.name.replace(/'/g, "\\'")}', '${thumbUrl}')" title="Tambah ke Antrian">
+               ${ICONS.plus}
+             </button>
+
+             <button class="info-btn-card" onclick="event.stopPropagation(); showVideoInfo('${v.name.replace(/'/g, "\\'")}', '${v.path.replace(/'/g, "\\'")}', '${v.size}', '--:--')" title="Info">
+               ${ICONS.info}
              </button>
 
              <div class="overlay-play"><div class="play-circle">${ICONS.play}</div></div>
