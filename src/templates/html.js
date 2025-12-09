@@ -27,7 +27,7 @@ function renderContinueWatching(items, currentPath) {
         ${items.map(item => {
     const folderPath = item.path.split('/').slice(0, -1).join('/');
     return `
-          <div class="card video-card section-card" onclick="location.href='?path=${encodeURIComponent(folderPath)}&v=${encodeURIComponent(item.path)}'">
+          <div class="card video-card section-card" onclick="location.href='?path=${encodeURIComponent(folderPath)}&v=${encodeURIComponent(item.path)}'" data-video="${encodeURI(item.path)}">
             <div class="thumb-box ${item.hasThumb ? 'loaded' : ''}">
               ${!item.hasThumb ? '<div class="loader"></div>' : ''}
               <img src="${item.thumbUrl || ''}" loading="lazy">
@@ -97,7 +97,7 @@ function renderFavorites(items) {
         ${items.map(item => {
     const folderPath = item.path.split('/').slice(0, -1).join('/');
     return `
-          <div class="card video-card section-card" onclick="location.href='?path=${encodeURIComponent(folderPath)}&v=${encodeURIComponent(item.path)}'">
+          <div class="card video-card section-card" onclick="location.href='?path=${encodeURIComponent(folderPath)}&v=${encodeURIComponent(item.path)}'" data-video="${encodeURI(item.path)}">
             <div class="thumb-box ${item.hasThumb ? 'loaded' : ''}">
               ${!item.hasThumb ? '<div class="loader"></div>' : ''}
               <img src="${item.thumbUrl || ''}" loading="lazy">

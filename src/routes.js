@@ -288,6 +288,24 @@ function setupRoutes(app, baseDir) {
         }
     });
 
+    // Preview Video API (stream without extension in URL to avoid IDM)
+    app.get("/api/preview", async (req, res) => {
+        const videoPath = req.query.path;
+        if (!videoPath) return res.sendStatus(400);
+
+        // Security: Ensure path doesn't try to escape with ..
+        const safePath = path.normalize(videoPath).replace(/^(\.\.[\/\\])+/, '');
+        const fullPath = path.join(baseDir, safePath);
+
+        try {
+            await fsPromises.access(fullPath);
+            res.sendFile(fullPath);
+        } catch (e) {
+            console.error(e);
+            res.sendStatus(404);
+        }
+    });
+
     // Global random video API (all folders)
     app.get("/api/random-global", async (req, res) => {
         try {

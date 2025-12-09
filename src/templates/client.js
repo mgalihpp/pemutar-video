@@ -423,7 +423,8 @@ function initSingleHover(card) {
     card.addEventListener('mouseenter', () => {
         hoverTimeout = setTimeout(() => {
             const previewVid = document.createElement('video');
-            previewVid.src = videoPath;
+            // Use API proxy to avoid IDM catching the direct file extension
+            previewVid.src = `/api/preview?path=${encodeURIComponent(decodeURI(videoPath))}`;
             previewVid.className = 'preview-video';
             previewVid.muted = true;
             previewVid.loop = true;
