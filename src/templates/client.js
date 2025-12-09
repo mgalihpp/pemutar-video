@@ -647,7 +647,12 @@ if (video) {
         video.paused ? video.play() : video.pause();
     });
 
-    video.addEventListener('click', () => {
+    // Click to play/pause (desktop only - mobile uses touch handler)
+    video.addEventListener('click', (e) => {
+        // Ignore if this is from a touch event (mobile)
+        if (e.pointerType === 'touch' || 'ontouchstart' in window && e.sourceCapabilities?.firesTouchEvents) {
+            return;
+        }
         video.paused ? video.play() : video.pause();
     });
 
@@ -746,20 +751,26 @@ if (video) {
 
     // Tap to toggle controls on mobile + double-tap to skip
     let lastTap = 0;
-    let lastTapX = 0;
+    let singleTapTimeout = null;
+
     video.addEventListener('touchend', (e) => {
         const touch = e.changedTouches[0];
         const now = Date.now();
         const rect = video.getBoundingClientRect();
         const tapX = touch.clientX;
         const videoWidth = rect.width;
+        const tapPosition = tapX - rect.left;
+
+        // Clear any pending single tap
+        if (singleTapTimeout) {
+            clearTimeout(singleTapTimeout);
+            singleTapTimeout = null;
+        }
 
         if (now - lastTap < 300) {
             // Double tap detected
             e.preventDefault();
 
-            // Determine which side was tapped
-            const tapPosition = tapX - rect.left;
             const isLeftSide = tapPosition < videoWidth / 3;
             const isRightSide = tapPosition > videoWidth * 2 / 3;
 
@@ -779,13 +790,15 @@ if (video) {
                     video.pause();
                 }
             }
+            lastTap = 0; // Reset to prevent triple-tap issues
         } else {
-            // Single tap - toggle controls
-            container.classList.toggle('controls-visible');
-            setTimeout(() => container.classList.remove('controls-visible'), 3000);
+            // Wait to see if it's a double tap before executing single tap
+            singleTapTimeout = setTimeout(() => {
+                container.classList.toggle('controls-visible');
+                setTimeout(() => container.classList.remove('controls-visible'), 3000);
+            }, 300);
+            lastTap = now;
         }
-        lastTap = now;
-        lastTapX = tapX;
     });
 
     // Show skip indicator
@@ -805,28 +818,16 @@ if (video) {
         setTimeout(() => indicator.remove(), 600);
     }
 
-    // Fullscreen with orientation lock for mobile
+    // Fullscreen toggle
     fullscreenBtn.addEventListener('click', async () => {
         if (document.fullscreenElement) {
             await document.exitFullscreen();
-            // Unlock orientation when exiting fullscreen
-            if (screen.orientation && screen.orientation.unlock) {
-                screen.orientation.unlock();
-            }
         } else {
             await container.requestFullscreen();
-            // Allow both landscape orientations in fullscreen
-            if (screen.orientation && screen.orientation.lock) {
-                try {
-                    await screen.orientation.lock('landscape');
-                } catch (e) {
-                    // Orientation lock not supported, that's ok
-                }
-            }
         }
     });
 
-    // Also handle fullscreen change to update icon
+    // Handle fullscreen change to update icon
     document.addEventListener('fullscreenchange', () => {
         if (document.fullscreenElement) {
             fullscreenBtn.innerHTML = window.SVG_ICONS.exitFullscreen;
@@ -834,10 +835,6 @@ if (video) {
         } else {
             fullscreenBtn.innerHTML = window.SVG_ICONS.fullscreen;
             container.classList.remove('fullscreen');
-            // Unlock orientation
-            if (screen.orientation && screen.orientation.unlock) {
-                try { screen.orientation.unlock(); } catch (e) { }
-            }
         }
     });
 
