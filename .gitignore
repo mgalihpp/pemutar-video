@@ -1,0 +1,15 @@
+/.data
+/.thumbnails
+node_modules
+*.mp4
+*.webm
+*.mp3
+*.wav
+*.jpg
+*.png
+*.gif
+*.webp
+*.mkv
+*.rar
+*.zip
+*.7z
