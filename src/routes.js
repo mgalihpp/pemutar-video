@@ -27,6 +27,48 @@ function setupRoutes(app, baseDir) {
         res.json(results);
     });
 
+    // Browse API - returns both folders and videos (for Android app)
+    app.get("/api/browse", async (req, res) => {
+        const currentPath = req.query.path || "";
+        const fullDir = path.join(baseDir, currentPath);
+
+        try {
+            await fsPromises.access(fullDir);
+        } catch (e) {
+            return res.json({ folders: [], videos: [] });
+        }
+
+        const items = await getItemsInFolder(fullDir, currentPath);
+
+        // Separate folders and videos
+        const folders = items
+            .filter((i) => i.type === "folder")
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+        const videos = items
+            .filter((i) => i.type === "video")
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+            .map((v) => {
+                const thumbFile = getThumbPath(v.path);
+                const hasThumb = fs.existsSync(thumbFile);
+                const isFav = metadata.isFavorite(v.path);
+                const progress = metadata.getProgress(v.path);
+                const videoMeta = metadata.getVideoMeta(v.path);
+
+                return {
+                    ...v,
+                    thumbUrl: hasThumb ? `/.thumbnails/${path.basename(thumbFile)}` : "",
+                    hasThumb,
+                    isFavorite: isFav,
+                    progress: progress ? progress.progress : 0,
+                    duration: videoMeta ? videoMeta.duration : null,
+                    percent: progress ? Math.round((progress.progress / progress.duration) * 100) : 0,
+                };
+            });
+
+        res.json({ folders, videos });
+    });
+
     // Paginated videos API
     app.get("/api/videos", async (req, res) => {
         const currentPath = req.query.path || "";
