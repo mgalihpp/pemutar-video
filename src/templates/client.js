@@ -206,6 +206,12 @@ function createVideoCard(v, currentPath) {
         <span class="heart-empty">${window.SVG_ICONS.heart}</span>
         <span class="heart-filled">${window.SVG_ICONS.heartFilled}</span>
       </button>
+      <button class="add-queue-btn-card" onclick="event.stopPropagation(); addToVideoQueue('${encodeURIComponent(v.path)}', '${encodeURIComponent(currentPath)}', '${v.name.replace(/'/g, "\\'")}', '${v.thumbUrl}')" title="Tambah ke Antrian">
+        ${window.SVG_ICONS.plus}
+      </button>
+      <button class="info-btn-card" onclick="event.stopPropagation(); showVideoInfo('${v.name.replace(/'/g, "\\'")}', '${v.path.replace(/'/g, "\\'")}', '${v.size}', '--:--')" title="Info">
+        ${window.SVG_ICONS.info}
+      </button>
       <div class="overlay-play"><div class="play-circle">${window.SVG_ICONS.play}</div></div>
     </div>
     <div class="meta"><div class="title" title="${v.name}">${v.name}</div><div class="details"><span>Video</span><span>${v.size}</span></div></div>
@@ -578,6 +584,10 @@ if (video) {
     const pipBtn = document.getElementById('pipBtn');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const centerPlayOverlay = document.getElementById('centerPlayOverlay');
+    const seekPreview = document.getElementById('seekPreview');
+    const seekPreviewVideo = seekPreview?.querySelector('video');
+    const seekPreviewTime = seekPreview?.querySelector('.seek-time');
+    let previewLoaded = false;
 
     let idleTimeout;
     let isDragging = false;
@@ -639,6 +649,26 @@ if (video) {
                 container.classList.add('idle');
             }, 3000);
         }
+    }
+
+    // Auto Next Toggle
+    const autoNextBtn = document.getElementById('autoNextBtn');
+    let autoNextEnabled = localStorage.getItem('autoNextEnabled') !== 'false'; // Default true
+
+    function updateAutoNextIcon() {
+        if (!autoNextBtn) return;
+        autoNextBtn.querySelector('.icon-toggle-on').classList.toggle('hidden', !autoNextEnabled);
+        autoNextBtn.querySelector('.icon-toggle-off').classList.toggle('hidden', autoNextEnabled);
+        autoNextBtn.title = autoNextEnabled ? 'Auto Next: ON' : 'Auto Next: OFF';
+    }
+
+    if (autoNextBtn) {
+        updateAutoNextIcon();
+        autoNextBtn.addEventListener('click', () => {
+            autoNextEnabled = !autoNextEnabled;
+            localStorage.setItem('autoNextEnabled', autoNextEnabled);
+            updateAutoNextIcon();
+        });
     }
 
     // Add to Queue (Theater)
@@ -717,12 +747,46 @@ if (video) {
 
     document.addEventListener('mousemove', (e) => {
         if (!isDragging) {
-            // Show tooltip on hover
             const rect = progressContainer.getBoundingClientRect();
-            if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            const isHovering = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+            if (isHovering) {
                 const percent = (e.clientX - rect.left) / rect.width;
-                progressTooltip.textContent = formatVideoTime(percent * video.duration);
-                progressTooltip.style.left = (percent * 100) + '%';
+                const time = percent * video.duration;
+
+                // Update Tooltip
+                if (progressTooltip) {
+                    progressTooltip.textContent = formatVideoTime(time);
+                    progressTooltip.style.left = (percent * 100) + '%';
+                }
+
+                // Update Seek Preview
+                if (seekPreview && seekPreviewVideo) {
+                    if (!previewLoaded && video.dataset.path) {
+                        seekPreviewVideo.src = `/api/preview?path=${encodeURIComponent(decodeURIComponent(video.dataset.path))}`;
+                        previewLoaded = true;
+                    }
+
+                    // Always update position and time text for responsiveness
+                    seekPreview.style.left = (percent * 100) + '%';
+                    if (seekPreviewTime) seekPreviewTime.textContent = formatVideoTime(time);
+                    seekPreview.classList.remove('hidden');
+
+                    // Throttle video seeking (heavy operation)
+                    const now = Date.now();
+                    if (!seekPreviewVideo.dataset.lastUpdate || now - parseInt(seekPreviewVideo.dataset.lastUpdate) > 150) {
+                        if (isFinite(time)) {
+                            // Only update if difference is significant (> 1s) to avoid jitter
+                            if (Math.abs(seekPreviewVideo.currentTime - time) > 1) {
+                                seekPreviewVideo.currentTime = time;
+                            }
+                        }
+                        seekPreviewVideo.dataset.lastUpdate = now;
+                    }
+                }
+            } else {
+                // Hide preview if not hovering
+                if (seekPreview) seekPreview.classList.add('hidden');
             }
             return;
         }
@@ -837,6 +901,18 @@ if (video) {
         setTimeout(() => indicator.remove(), 600);
     }
 
+    // Show seek time feedback (Desktop)
+    let seekFeedbackTimeout;
+    function showSeekTimeFeedback() {
+        const existing = container.querySelector('.seek-time-feedback');
+        if (existing) existing.remove();
+
+        const feedback = document.createElement('div');
+        feedback.className = 'seek-time-feedback';
+        feedback.textContent = formatVideoTime(video.currentTime);
+        container.appendChild(feedback);
+    }
+
     // Fullscreen toggle
     fullscreenBtn.addEventListener('click', async () => {
         if (document.fullscreenElement) {
@@ -933,9 +1009,11 @@ if (video) {
                 break;
             case 'arrowright':
                 video.currentTime += 10;
+                showSeekTimeFeedback();
                 break;
             case 'arrowleft':
                 video.currentTime -= 10;
+                showSeekTimeFeedback();
                 break;
             case 'arrowup':
                 e.preventDefault();
@@ -1001,6 +1079,8 @@ if (video) {
 
         // Show overlay when video ends
         video.addEventListener('ended', () => {
+            if (!autoNextEnabled) return;
+
             countdownValue = 5;
             upNextCountdown.textContent = countdownValue;
             upNextOverlay.classList.remove('hidden');
@@ -1513,6 +1593,9 @@ function initQueueSystem() {
     const currentUrl = new URL(window.location);
     if (currentUrl.searchParams.get('queue') === 'true' && video) {
         video.addEventListener('ended', () => {
+            // Check Auto Next preference
+            if (localStorage.getItem('autoNextEnabled') === 'false') return;
+
             // If playing from queue, try to play next
             if (!playNextInQueue()) {
                 // No more in queue, show up-next overlay if available

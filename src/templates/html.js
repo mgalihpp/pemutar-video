@@ -307,6 +307,10 @@ ${CSS_CONTENT}
           <div class="video-controls" id="videoControls">
             <!-- Progress Bar -->
             <div class="progress-container" id="progressContainer">
+              <div class="seek-preview hidden" id="seekPreview">
+                <video muted preload="auto"></video>
+                <div class="seek-time">0:00</div>
+              </div>
               <div class="progress-bar-video" id="progressBar">
                 <div class="progress-buffered" id="progressBuffered"></div>
                 <div class="progress-current" id="progressCurrent"></div>
@@ -339,6 +343,10 @@ ${CSS_CONTENT}
                 </div>
               </div>
               <div class="controls-right">
+                <button class="control-btn" id="autoNextBtn" title="Auto Next">
+                  <span class="icon-toggle-on">${ICONS.toggleOn}</span>
+                  <span class="icon-toggle-off hidden">${ICONS.toggleOff}</span>
+                </button>
                 <button class="control-btn" id="addToQueueBtnTheater" title="Tambah ke Antrian">
                   ${ICONS.plus}
                 </button>

@@ -2338,3 +2338,67 @@ video {
     font-size: 0.85rem;
   }
 }
+
+/* Seek Preview */
+.seek-preview {
+  position: absolute;
+  bottom: 25px;
+  /* Above progress bar */
+  left: 0;
+  transform: translateX(-50%);
+  width: 160px;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 100;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+.seek-preview.hidden {
+  opacity: 0;
+}
+
+.seek-preview video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  display: block;
+  object-fit: cover;
+}
+
+.seek-time {
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Seek Time Feedback (Desktop Arrows) */
+.seek-time-feedback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 25;
+  animation: fadeInOut 1s ease forwards;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+}
